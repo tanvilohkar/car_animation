@@ -1,0 +1,130 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #090a0f;
+  --foreground: #f8fafc;
+  --accent-lime: #def54f;
+  --accent-cyan: #6ac9ff;
+  --accent-orange: #fa7328;
+  --accent-green: #45db7d;
+  --font-outfit: 'Outfit', sans-serif;
+  --font-space: 'Space Grotesk', monospace;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-outfit);
+  overflow-x: clip;
+  selection-background-color: #def54f;
+  selection-color: #000;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #090a0f;
+}
+::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #def54f;
+}
+
+/* Road Asphalt and Lane Markings */
+.road-surface {
+  background: radial-gradient(circle at 50% 50%, #1c1d24 0%, #121318 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.road-surface::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: 
+    radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 20px 20px, 100% 40px;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Glowing Road Centerlines */
+.road-centerline {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.15) 0px,
+    rgba(255, 255, 255, 0.15) 40px,
+    transparent 40px,
+    transparent 80px
+  );
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+/* Ambient Headlight Cone */
+.headlight-cone {
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  transform: translateY(-50%);
+  width: 450px;
+  height: 160px;
+  background: radial-gradient(ellipse at left center, rgba(106, 201, 255, 0.35) 0%, rgba(106, 201, 255, 0.1) 40%, transparent 75%);
+  filter: blur(12px);
+  pointer-events: none;
+  z-index: 8;
+}
+
+/* Dynamic Tire Trail */
+.tire-trail {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(69, 219, 125, 0.2) 0%, rgba(69, 219, 125, 0.85) 85%, #def54f 100%);
+  box-shadow: 0 0 35px rgba(69, 219, 125, 0.4), inset 0 0 15px rgba(222, 245, 79, 0.3);
+  z-index: 2;
+  border-right: 3px solid #def54f;
+}
+
+/* Glassmorphism Card Style */
+.glass-card {
+  background: rgba(18, 20, 29, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 1px 1px rgba(255, 255, 255, 0.05);
+}
+
+/* Text glow utilities */
+.text-glow-lime {
+  text-shadow: 0 0 20px rgba(222, 245, 79, 0.5);
+}
+.text-glow-cyan {
+  text-shadow: 0 0 20px rgba(106, 201, 255, 0.5);
+}
+
+.headline-tracked {
+  letter-spacing: 0.35em;
+}

@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scroll-Driven Hero Section Animation | McLaren 720S Experience</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+    rel="stylesheet" />
+  <link rel="preload" as="image" href="public/car.png" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            lime: {
+              neon: '#def54f',
+            },
+            cyan: {
+              neon: '#6ac9ff',
+            },
+            orange: {
+              neon: '#fa7328',
+            },
+            emerald: {
+              neon: '#45db7d',
+            },
+          },
+          fontFamily: {
+            sans: ['Outfit', 'sans-serif'],
+            mono: ['Space Grotesk', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- GSAP & ScrollTrigger CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <!-- Canvas Confetti CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    :root {
+      --background: #090a0f;
+      --foreground: #f8fafc;
+      --accent-lime: #def54f;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: var(--background);
+      color: var(--foreground);
+      font-family: 'Outfit', sans-serif;
+      overflow-x: clip;
+      selection-background-color: #def54f;
+      selection-color: #000;
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #090a0f;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #27272a;
+      border-radius: 9999px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #def54f;
+    }
+
+    /* Road surface texture */
+    .road-surface {
+      background: radial-gradient(circle at 50% 50%, #1c1d24 0%, #121318 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .road-surface::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 20px 20px, 100% 40px;
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    /* Glowing road center dashed line */
+    .road-centerline {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: repeating-linear-gradient(90deg,
+          rgba(255, 255, 255, 0.15) 0px,
+          rgba(255, 255, 255, 0.15) 40px,
+          transparent 40px,
+          transparent 80px);
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+
+    /* Dynamic neon tire trail */
+    .tire-trail {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      background: linear-gradient(90deg, rgba(69, 219, 125, 0.18) 0%, rgba(69, 219, 125, 0.85) 85%, #def54f 100%);
+      box-shadow: 0 0 35px rgba(69, 219, 125, 0.4), inset 0 0 15px rgba(222, 245, 79, 0.3);
+      z-index: 2;
+      border-right: 3px solid #def54f;
+      width: 0;
+    }
+
+    /* Headlight projection cone */
+    .headlight-cone {
+      position: absolute;
+      top: 50%;
+      left: 100%;
+      transform: translateY(-50%);
+      width: 480px;
+      height: 170px;
+      background: radial-gradient(ellipse at left center, rgba(106, 201, 255, 0.35) 0%, rgba(106, 201, 255, 0.08) 45%, transparent 75%);
+      filter: blur(14px);
+      pointer-events: none;
+      z-index: 8;
+      transition: opacity 0.3s ease;
+    }
+
+    /* Glassmorphism card */
+    .glass-card {
+      background: rgba(18, 20, 29, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 1px 1px rgba(255, 255, 255, 0.05);
+    }
+  </style>
+</head>
+
+<body class="bg-[#090a0f] text-slate-100 antialiased selection:bg-[#def54f] selection:text-black">
+  <!-- Hero Section Main Wrapper -->
+  <main id="hero" class="relative w-full bg-[#090a0f]">
+    <!-- 
+        ========================================================================
+        1. FIRST SCREEN: ABOVE THE FOLD HERO INTRO
+        ========================================================================
+      -->
+    <section
+      class="relative min-h-screen w-full flex flex-col justify-between pt-12 sm:pt-16 md:pt-20 pb-12 px-4 md:px-8 max-w-7xl mx-auto z-20">
+      <!-- Radial glow -->
+      <div
+        class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-gradient-to-r from-[#def54f]/10 via-[#45db7d]/10 to-[#6ac9ff]/10 blur-[130px] rounded-full pointer-events-none">
+      </div>
+
+      <!-- Top Badges & Headline -->
+      <div class="mt-4 md:mt-8 flex flex-col items-center text-center">
+        <div
+          class="hero-badge inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-xs font-mono tracking-wider text-slate-300 backdrop-blur-md mb-6">
+          <i data-lucide="sparkles" class="w-3.5 h-3.5 text-[#def54f] animate-pulse"></i>
+          <span>KINETIC SCROLL ANIMATION ENGINE</span>
+          <span class="w-1.5 h-1.5 rounded-full bg-[#def54f]"></span>
+          <span class="text-[#def54f]">MCLAREN 720S</span>
+        </div>
+
+        <!-- Headline: Only ITZFIZZ (Letter-Spaced) -->
+        <h1
+          class="hero-title flex flex-wrap justify-center text-4xl sm:text-6xl md:text-8xl lg:text-9xl font-black tracking-[0.25em] sm:tracking-[0.4em] text-white uppercase select-none drop-shadow-2xl">
+          <span class="letter inline-block">I</span>
+          <span class="letter inline-block">T</span>
+          <span class="letter inline-block">Z</span>
+          <span class="letter inline-block">F</span>
+          <span class="letter inline-block">I</span>
+          <span class="letter inline-block">Z</span>
+          <span class="letter inline-block">Z</span>
+        </h1>
+
+        <p
+          class="hero-subtitle mt-6 text-sm sm:text-base md:text-lg text-slate-400 max-w-2xl font-normal leading-relaxed">
+          Experience next-generation scroll-driven physics. Seamlessly glide the McLaren 720S along the kinetic track to
+          unveil real-time operational impact benchmarks.
+        </p>
+      </div>
+
+      <!-- Initial Load Statistics Cards -->
+      <div id="stats" class="my-8 md:my-12">
+        <div class="text-center mb-6">
+          <span class="text-xs uppercase font-mono tracking-widest text-slate-400">
+            Impact Metrics & Live Telemetry
+          </span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <!-- Box 1 -->
+          <div
+            class="stat-card glass-card p-6 rounded-2xl border border-[#def54f]/30 relative overflow-hidden group hover:border-[#def54f] transition-all duration-300">
+            <div
+              class="absolute top-0 right-0 w-24 h-24 bg-[#def54f]/10 rounded-full blur-2xl group-hover:bg-[#def54f]/20 transition-all pointer-events-none">
+            </div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-mono font-medium text-slate-400">PICKUP HUBS</span>
+              <span
+                class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#def54f]/20 text-[#def54f] border border-[#def54f]/40">+SURGE</span>
+            </div>
+            <div class="text-4xl md:text-5xl font-black font-mono text-[#def54f] tracking-tight">
+              <span class="counter" data-target="58">0</span>%
+            </div>
+            <p class="mt-2 text-xs text-slate-300 font-medium">
+              Increase in automated pick-up point usage across smart corridors.
+            </p>
+          </div>
+
+          <!-- Box 2 -->
+          <div
+            class="stat-card glass-card p-6 rounded-2xl border border-[#6ac9ff]/30 relative overflow-hidden group hover:border-[#6ac9ff] transition-all duration-300">
+            <div
+              class="absolute top-0 right-0 w-24 h-24 bg-[#6ac9ff]/10 rounded-full blur-2xl group-hover:bg-[#6ac9ff]/20 transition-all pointer-events-none">
+            </div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-mono font-medium text-slate-400">CALL DEFLECTION</span>
+              <span
+                class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#6ac9ff]/20 text-[#6ac9ff] border border-[#6ac9ff]/40">-REDUCTION</span>
+            </div>
+            <div class="text-4xl md:text-5xl font-black font-mono text-[#6ac9ff] tracking-tight">
+              <span class="counter" data-target="23">0</span>%
+            </div>
+            <p class="mt-2 text-xs text-slate-300 font-medium">
+              Decrease in inbound customer inquiries via autonomous status telemetry.
+            </p>
+          </div>
+
+          <!-- Box 3 -->
+          <div
+            class="stat-card glass-card p-6 rounded-2xl border border-white/20 relative overflow-hidden group hover:border-white transition-all duration-300">
+            <div
+              class="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:bg-white/15 transition-all pointer-events-none">
+            </div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-mono font-medium text-slate-400">ROUTE VELOCITY</span>
+              <span
+                class="px-2 py-0.5 rounded text-[10px] font-bold bg-white/15 text-white border border-white/30">+THROUGHPUT</span>
+            </div>
+            <div class="text-4xl md:text-5xl font-black font-mono text-white tracking-tight">
+              <span class="counter" data-target="27">0</span>%
+            </div>
+            <p class="mt-2 text-xs text-slate-300 font-medium">
+              Faster localized delivery dispatches with zero terminal congestion.
+            </p>
+          </div>
+
+          <!-- Box 4 -->
+          <div
+            class="stat-card glass-card p-6 rounded-2xl border border-[#fa7328]/30 relative overflow-hidden group hover:border-[#fa7328] transition-all duration-300">
+            <div
+              class="absolute top-0 right-0 w-24 h-24 bg-[#fa7328]/10 rounded-full blur-2xl group-hover:bg-[#fa7328]/20 transition-all pointer-events-none">
+            </div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-mono font-medium text-slate-400">EFFICIENCY GAIN</span>
+              <span
+                class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#fa7328]/20 text-[#fa7328] border border-[#fa7328]/40">+OPTIMIZED</span>
+            </div>
+            <div class="text-4xl md:text-5xl font-black font-mono text-[#fa7328] tracking-tight">
+              <span class="counter" data-target="40">0</span>%
+            </div>
+            <p class="mt-2 text-xs text-slate-300 font-medium">
+              Overall operational performance and SLA delivery enhancement.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scroll Down Cue -->
+      <div class="scroll-cue flex flex-col items-center justify-center gap-2">
+        <a href="#trackSection" onclick="ensureAudioUnlocked()"
+          class="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-slate-400 hover:text-[#def54f] transition-colors py-2 px-4 rounded-full bg-white/5 border border-white/10 hover:border-[#def54f]/50">
+          <span>Scroll Down to Accelerate</span>
+          <i data-lucide="arrow-down" class="w-3.5 h-3.5 animate-bounce text-[#def54f]"></i>
+        </a>
+      </div>
+    </section>
+
+    <!-- 
+        ========================================================================
+        2. PINNED KINETIC TRACK & SCROLL-DRIVEN ANIMATION
+        ========================================================================
+      -->
+    <div id="trackSection" class="relative w-full h-screen flex flex-col justify-center items-center overflow-hidden bg-[#0a0b10]">
+        <!-- Upper Track Header -->
+        <div
+          class="absolute top-16 md:top-20 left-0 right-0 z-20 px-6 max-w-7xl mx-auto flex items-center justify-between pointer-events-none">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-[#45db7d] animate-ping"></span>
+            <span class="font-mono text-xs text-slate-300 uppercase tracking-widest font-semibold">
+              Live Kinetic Runway
+            </span>
+          </div>
+          <div class="text-right font-mono text-xs text-slate-400">
+            <span class="text-[#def54f]">McLaren 720S</span> • Twin-Turbo 4.0L V8
+          </div>
+        </div>
+
+        <!-- Staggered Floating Impact Cards -->
+        <!-- Box 1 -->
+        <div id="fBox1"
+          class="floating-box absolute z-30 top-[6%] md:top-[8%] left-[28%] md:left-[35%] p-5 md:p-6 rounded-2xl backdrop-blur-xl border border-[#def54f]/50 shadow-[0_10px_30px_rgba(222,245,79,0.35)] max-w-[280px] sm:max-w-[320px] transition-all duration-300 opacity-0 bg-[#def54f] text-black">
+          <div class="flex items-baseline gap-2">
+            <span class="text-4xl md:text-5xl font-black font-mono tracking-tight text-black">58%</span>
+            <span class="text-xs font-mono font-bold uppercase tracking-wider text-black opacity-80">PICK-UP
+              ADOPTION</span>
+          </div>
+          <p class="mt-2 text-xs md:text-sm font-medium leading-relaxed text-black opacity-90">
+            Surge in autonomous locker and designated pickup hub routing
+          </p>
+        </div>
+
+        <!-- Box 2 -->
+        <div id="fBox2"
+          class="floating-box absolute z-30 bottom-[6%] md:bottom-[8%] left-[45%] md:left-[52%] p-5 md:p-6 rounded-2xl backdrop-blur-xl border border-[#6ac9ff]/50 shadow-[0_10px_30px_rgba(106,201,255,0.35)] max-w-[280px] sm:max-w-[320px] transition-all duration-300 opacity-0 bg-[#6ac9ff] text-black">
+          <div class="flex items-baseline gap-2">
+            <span class="text-4xl md:text-5xl font-black font-mono tracking-tight text-black">23%</span>
+            <span class="text-xs font-mono font-bold uppercase tracking-wider text-black opacity-80">INBOUND CALL
+              DROP</span>
+          </div>
+          <p class="mt-2 text-xs md:text-sm font-medium leading-relaxed text-black opacity-90">
+            Drastic reduction in manual customer support resolution calls
+          </p>
+        </div>
+
+        <!-- Box 3 -->
+        <div id="fBox3"
+          class="floating-box absolute z-30 top-[6%] md:top-[8%] right-[18%] md:right-[24%] p-5 md:p-6 rounded-2xl backdrop-blur-xl border border-white/30 shadow-[0_10px_30px_rgba(255,255,255,0.2)] max-w-[280px] sm:max-w-[320px] transition-all duration-300 opacity-0 bg-[#1e2029] text-white">
+          <div class="flex items-baseline gap-2">
+            <span class="text-4xl md:text-5xl font-black font-mono tracking-tight text-white">27%</span>
+            <span class="text-xs font-mono font-bold uppercase tracking-wider text-white opacity-80">FLEET
+              VELOCITY</span>
+          </div>
+          <p class="mt-2 text-xs md:text-sm font-medium leading-relaxed text-white opacity-90">
+            Accelerated transit throughput with zero idle bottleneck
+          </p>
+        </div>
+
+        <!-- Box 4 -->
+        <div id="fBox4"
+          class="floating-box absolute z-30 bottom-[6%] md:bottom-[8%] right-[4%] md:right-[8%] p-5 md:p-6 rounded-2xl backdrop-blur-xl border border-[#fa7328]/50 shadow-[0_10px_30px_rgba(250,115,40,0.35)] max-w-[280px] sm:max-w-[320px] transition-all duration-300 opacity-0 bg-[#fa7328] text-white">
+          <div class="flex items-baseline gap-2">
+            <span class="text-4xl md:text-5xl font-black font-mono tracking-tight text-white">40%</span>
+            <span class="text-xs font-mono font-bold uppercase tracking-wider text-white opacity-80">OPERATIONAL
+              EFFICIENCY</span>
+          </div>
+          <p class="mt-2 text-xs md:text-sm font-medium leading-relaxed text-white opacity-90">
+            Overall milestone completion and route sustainability gain
+          </p>
+        </div>
+
+        <!-- Road Runway -->
+        <div id="roadRunway"
+          class="road-surface relative w-full h-[220px] sm:h-[250px] md:h-[280px] border-y border-white/10 shadow-[0_0_80px_rgba(0,0,0,0.9)] flex items-center">
+          <!-- Centerline -->
+          <div class="road-centerline"></div>
+
+          <!-- Glowing Trail -->
+          <div id="roadTrail" class="tire-trail"></div>
+
+          <!-- Finish line -->
+          <div class="absolute right-0 top-0 bottom-0 w-12 z-10 flex flex-col justify-between opacity-80" style="
+                background-image: repeating-conic-gradient(#fff 0% 25%, #000 0% 50%) 50% / 20px 20px;
+                border-left: 3px solid #def54f;
+              ">
+            <div
+              class="absolute -left-14 top-2 text-[10px] font-mono font-bold text-[#def54f] uppercase tracking-wider rotate-90 origin-right">
+              FINISH
+            </div>
+          </div>
+
+          <!-- Kinetic Revealed Text inside Road: WELCOME ITZFIZZ -->
+          <div id="roadTextContainer"
+            class="absolute inset-0 flex items-center justify-start pl-8 md:pl-16 z-20 pointer-events-none select-none overflow-hidden">
+            <div
+              class="flex items-center gap-1 sm:gap-2.5 md:gap-4 font-black text-4xl sm:text-6xl md:text-8xl tracking-widest">
+              <span class="track-letter font-sans uppercase font-black" style="opacity: 0.15; color: #64748b;">W</span>
+              <span class="track-letter font-sans uppercase font-black" style="opacity: 0.15; color: #64748b;">E</span>
+              <span class="track-letter font-sans uppercase font-black" style="opacity: 0.15; color: #64748b;">L</span>
+              <span class="track-letter font-sans uppercase font-black" style="opacity: 0.15; color: #64748b;">C</span>
+              <span class="track-letter font-sans uppercase font-black" style="opacity: 0.15; color: #64748b;">O</span>
+              <span class="track-letter font-sans uppercase font-black" style="opacity: 0.15; color: #64748b;">M</span>
+              <span class="track-letter font-sans uppercase font-black" style="opacity: 0.15; color: #64748b;">E</span>
+              <span class="track-letter font-sans uppercase font-black"
+                style="opacity: 0.15; color: #64748b;">&nbsp;</span>
+              <span class="track-letter font-sans uppercase font-black" style="opacity: 0.15; color: #64748b;">I</span>
+              <span class="track-letter font-sans uppercase font-black" style="opacity: 0.15; color: #64748b;">T</span>
+              <span class="track-letter font-sans uppercase font-black" style="opacity: 0.15; color: #64748b;">Z</span>
+              <span class="track-letter font-sans uppercase font-black" style="opacity: 0.15; color: #64748b;">F</span>
+              <span class="track-letter font-sans uppercase font-black" style="opacity: 0.15; color: #64748b;">I</span>
+              <span class="track-letter font-sans uppercase font-black" style="opacity: 0.15; color: #64748b;">Z</span>
+              <span class="track-letter font-sans uppercase font-black" style="opacity: 0.15; color: #64748b;">Z</span>
+            </div>
+          </div>
+
+          <!-- The McLaren 720S Car -->
+          <div id="carVehicle" class="absolute left-0 top-1/2 -translate-y-1/2 z-30 cursor-grab will-change-transform"
+            style="width: 180px; height: 110px;">
+            <img src="public/car.png" alt="McLaren 720S Top View"
+              class="w-full h-full object-contain filter drop-shadow-[0_15px_25px_rgba(0,0,0,0.85)] select-none pointer-events-none"
+              draggable="false" />
+            <!-- Xenon Headlight Beam -->
+            <div id="headlightBeam" class="headlight-cone"></div>
+          </div>
+        </div>
+
+        <!-- Bottom Legend -->
+        <div
+          class="absolute bottom-8 left-0 right-0 z-20 px-6 max-w-7xl mx-auto flex items-center justify-between text-xs font-mono text-slate-400 pointer-events-none">
+          <div class="flex items-center gap-4 text-xs font-mono text-slate-400">
+            <span class="flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-[#def54f]"></span> 01 Acceleration
+            </span>
+            <span class="flex items-center gap-1.5 hidden sm:inline-flex">
+              <span class="w-2 h-2 rounded-full bg-[#6ac9ff]"></span> 02 Mid-Track Scrub
+            </span>
+            <span class="flex items-center gap-1.5 hidden sm:inline-flex">
+              <span class="w-2 h-2 rounded-full bg-[#fa7328]"></span> 03 Top Velocity
+            </span>
+          </div>
+          <div class="text-xs font-mono text-slate-400">
+            Scroll Drag: Fluid Physics (1.1s Inertia)
+          </div>
+        </div>
+    </div>
+
+    <!-- Specs Section -->
+    <section id="specs" class="relative py-24 px-4 md:px-8 max-w-7xl mx-auto z-20 border-t border-white/10">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16">
+        <div>
+          <div
+            class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-mono text-[#def54f] mb-4">
+            <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
+            <span>AERODYNAMIC TELEMETRY & SPECS</span>
+          </div>
+          <h2 class="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight uppercase">
+            McLaren 720S <span class="text-slate-400 font-light">&</span> Motion Architecture
+          </h2>
+        </div>
+        <p class="text-slate-400 max-w-md text-sm leading-relaxed">
+          Engineered for raw kinetic power. Paired with GSAP ScrollTrigger hardware-accelerated transforms to achieve
+          flawless 120 FPS visual fidelity.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+        <div
+          class="glass-card p-8 rounded-3xl border border-white/10 hover:border-[#def54f]/50 transition-all duration-300">
+          <div
+            class="w-12 h-12 rounded-2xl bg-[#def54f]/10 border border-[#def54f]/30 flex items-center justify-center text-[#def54f] mb-6">
+            <i data-lucide="flame" class="w-6 h-6"></i>
+          </div>
+          <div class="text-4xl font-black font-mono text-white mb-2">
+            710 <span class="text-lg font-bold text-slate-400">BHP</span>
+          </div>
+          <h3 class="text-base font-bold text-white mb-2">4.0L M840T Twin-Turbo V8</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Mid-mounted powerhouse producing 770 Nm of torque, driving the rear wheels with lightning dual-clutch
+            responsiveness.
+          </p>
+        </div>
+
+        <div
+          class="glass-card p-8 rounded-3xl border border-white/10 hover:border-[#6ac9ff]/50 transition-all duration-300">
+          <div
+            class="w-12 h-12 rounded-2xl bg-[#6ac9ff]/10 border border-[#6ac9ff]/30 flex items-center justify-center text-[#6ac9ff] mb-6">
+            <i data-lucide="zap" class="w-6 h-6"></i>
+          </div>
+          <div class="text-4xl font-black font-mono text-white mb-2">
+            2.8 <span class="text-lg font-bold text-slate-400">SEC</span>
+          </div>
+          <h3 class="text-base font-bold text-white mb-2">0 - 100 KM/H Sprint</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Sub-3-second acceleration with launch control and proactive chassis control II for optimal cornering grip.
+          </p>
+        </div>
+
+        <div
+          class="glass-card p-8 rounded-3xl border border-white/10 hover:border-[#fa7328]/50 transition-all duration-300">
+          <div
+            class="w-12 h-12 rounded-2xl bg-[#fa7328]/10 border border-[#fa7328]/30 flex items-center justify-center text-[#fa7328] mb-6">
+            <i data-lucide="gauge" class="w-6 h-6"></i>
+          </div>
+          <div class="text-4xl font-black font-mono text-white mb-2">
+            341 <span class="text-lg font-bold text-slate-400">KM/H</span>
+          </div>
+          <h3 class="text-base font-bold text-white mb-2">Maximum Terminal Velocity</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Active aerodynamic rear wing functioning as an airbrake during high-speed deceleration.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="relative py-12 px-4 md:px-8 border-t border-white/10 bg-[#07080c] z-20">
+      <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#fa7328] via-[#def54f] to-[#45db7d] p-[1px]">
+            <div class="w-full h-full bg-[#090a0f] rounded-[7px] flex items-center justify-center">
+              <i data-lucide="flame" class="w-4 h-4 text-[#def54f]"></i>
+            </div>
+          </div>
+          <div>
+            <span class="font-extrabold text-sm tracking-widest text-white font-mono">
+              ITZFIZZ MOTORSPORT
+            </span>
+            <p class="text-[11px] text-slate-500">Scroll-Driven Hero Section Animation Assignment</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-4 text-xs font-mono text-slate-400">
+          <span>HTML5</span>
+          <span>•</span>
+          <span>CSS3</span>
+          <span>•</span>
+          <span>JAVASCRIPT</span>
+          <span>•</span>
+          <span>GSAP SCROLLTRIGGER</span>
+          <span>•</span>
+          <span>TAILWIND</span>
+        </div>
+
+        <button onclick="window.scrollTo({ top: 0, behavior: 'smooth' })"
+          class="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-[#def54f]/40 hover:text-[#def54f] text-xs font-mono text-slate-300 transition-all">
+          <span>Top</span>
+          <i data-lucide="arrow-up" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+    </footer>
+  </main>
+
+  <!-- Telemetry HUD Bottom Right -->
+  <div class="fixed bottom-6 right-6 z-40 hidden sm:flex items-center gap-3">
+    <div
+      class="glass-card rounded-2xl px-5 py-3 border border-white/10 flex items-center gap-6 shadow-2xl backdrop-blur-2xl">
+      <div class="flex flex-col">
+        <div class="flex items-center gap-1.5 text-[10px] uppercase font-mono tracking-wider text-slate-400">
+          <i data-lucide="gauge" class="w-3.5 h-3.5 text-[#def54f]"></i>
+          <span>Velocity</span>
+        </div>
+        <div class="flex items-baseline gap-1 mt-0.5">
+          <span id="hudSpeed" class="text-2xl font-black font-mono text-white tracking-tight">0</span>
+          <span class="text-xs font-semibold text-slate-400">KM/H</span>
+        </div>
+      </div>
+
+      <div class="w-[1px] h-8 bg-white/10"></div>
+
+      <div class="flex flex-col items-center">
+        <span class="text-[10px] uppercase font-mono tracking-wider text-slate-400">Gear</span>
+        <div id="hudGear"
+          class="mt-0.5 w-7 h-7 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center font-mono font-black text-sm text-[#def54f]">
+          P
+        </div>
+      </div>
+
+      <div class="w-[1px] h-8 bg-white/10"></div>
+
+      <div class="flex flex-col">
+        <div
+          class="flex items-center justify-between text-[10px] uppercase font-mono tracking-wider text-slate-400 gap-3">
+          <span class="flex items-center gap-1">
+            <i data-lucide="activity" class="w-3 h-3 text-[#6ac9ff]"></i> RPM
+          </span>
+          <span id="hudRpm" class="font-mono text-[#6ac9ff]">900</span>
+        </div>
+        <div class="w-24 h-1.5 bg-white/10 rounded-full mt-2 overflow-hidden">
+          <div id="hudRpmBar"
+            class="h-full bg-gradient-to-r from-[#45db7d] via-[#def54f] to-[#fa7328] w-[5%] transition-all duration-75">
+          </div>
+        </div>
+      </div>
+
+      <div class="w-[1px] h-8 bg-white/10"></div>
+
+      <div class="flex flex-col items-end">
+        <div class="flex items-center gap-1 text-[10px] uppercase font-mono tracking-wider text-slate-400">
+          <i data-lucide="zap" class="w-3.5 h-3.5 text-[#fa7328]"></i>
+          <span>Scroll</span>
+        </div>
+        <div id="hudProgress" class="text-sm font-black font-mono text-slate-200 mt-0.5">
+          0%
+        </div>
+      </div>
+
+      <div class="w-[1px] h-8 bg-white/10"></div>
+
+      <!-- Sound Control Button (Telemetry HUD) -->
+      <button id="hudSoundBtn" onclick="toggleEngineSound()" title="Toggle V8 Sound"
+        class="flex flex-col items-center gap-1 px-2 py-1 rounded-xl bg-white/5 hover:bg-white/10 transition-all text-slate-400 hover:text-[#def54f] cursor-pointer">
+        <div class="flex items-center gap-1 text-[10px] uppercase font-mono tracking-wider">
+          <i id="hudSoundIcon" data-lucide="volume-2" class="w-3.5 h-3.5 text-[#def54f]"></i>
+          <span id="hudSoundLabel">V8 Sound</span>
+        </div>
+        <span id="hudSoundStatus" class="text-[10px] font-mono font-bold text-[#def54f]">ACTIVE</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Script Logic: Auto Sound On Scroll + Headlights + Auto-Cruise -->
+  <script>
+    lucide.createIcons();
+
+    // Register GSAP ScrollTrigger
+    gsap.registerPlugin(ScrollTrigger);
+
+    // Web Audio V8 Synthetic Engine (ALWAYS ACTIVE ON SCROLL)
+    let audioCtx = null;
+    let osc1 = null;
+    let osc2 = null;
+    let osc3 = null;
+    let subOsc = null;
+    let turboOsc = null;
+    let turboGain = null;
+    let filter = null;
+    let shaper = null;
+    let masterGain = null;
+    let isAudioRunning = false;
+
+    function makeDistortionCurve(amount) {
+      const k = amount || 16;
+      const n_samples = 44100;
+      const curve = new Float32Array(n_samples);
+      const deg = Math.PI / 180;
+      for (let i = 0; i < n_samples; ++i) {
+        const x = (i * 2) / n_samples - 1;
+        curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+      }
+      return curve;
+    }
+
+    function startAudioEngine() {
+      if (!audioCtx) {
+        try {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) {
+            audioCtx = new AudioContextClass();
+          }
+        } catch (e) {
+          console.warn("Audio Context init error:", e);
+        }
+      }
+      if (!audioCtx) return;
+
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => { });
+      }
+
+      if (isAudioRunning) return;
+
+      try {
+        const now = audioCtx.currentTime;
+
+        masterGain = audioCtx.createGain();
+        masterGain.gain.setValueAtTime(0.22, now);
+
+        filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(480, now);
+        filter.Q.setValueAtTime(3.2, now);
+
+        shaper = audioCtx.createWaveShaper();
+        shaper.curve = makeDistortionCurve(16);
+        shaper.oversample = '2x';
+
+        // 1. Cylinder Sawtooth
+        osc1 = audioCtx.createOscillator();
+        osc1.type = 'sawtooth';
+        osc1.frequency.setValueAtTime(70, now);
+
+        // 2. Harmonic Body Triangle
+        osc2 = audioCtx.createOscillator();
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(140, now);
+
+        // 3. Cylinder High Bite Sawtooth
+        osc3 = audioCtx.createOscillator();
+        osc3.type = 'sawtooth';
+        osc3.frequency.setValueAtTime(210, now);
+
+        // 4. Sub Rumble Sine
+        subOsc = audioCtx.createOscillator();
+        subOsc.type = 'sine';
+        subOsc.frequency.setValueAtTime(50, now);
+
+        // 5. Twin-Turbo Whistle
+        turboOsc = audioCtx.createOscillator();
+        turboOsc.type = 'sine';
+        turboOsc.frequency.setValueAtTime(1400, now);
+
+        turboGain = audioCtx.createGain();
+        turboGain.gain.setValueAtTime(0.015, now);
+        turboOsc.connect(turboGain);
+        turboGain.connect(masterGain);
+
+        const cylGain = audioCtx.createGain();
+        cylGain.gain.setValueAtTime(0.35, now);
+
+        osc1.connect(cylGain);
+        osc2.connect(cylGain);
+        osc3.connect(cylGain);
+        subOsc.connect(cylGain);
+
+        cylGain.connect(shaper);
+        shaper.connect(filter);
+        filter.connect(masterGain);
+        masterGain.connect(audioCtx.destination);
+
+        osc1.start();
+        osc2.start();
+        osc3.start();
+        subOsc.start();
+        turboOsc.start();
+        isAudioRunning = true;
+      } catch (e) {
+        console.warn("Audio start error:", e);
+      }
+    }
+
+    function ensureAudioUnlocked() {
+      if (!isAudioRunning) {
+        startAudioEngine();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => { });
+      }
+    }
+
+    // Automatically unlock on all interactions until audio is running
+    const audioUnlockEvents = ['click', 'pointerdown', 'mousedown', 'touchstart', 'touchend', 'keydown', 'wheel', 'scroll'];
+    function handleWakeAudio() {
+      ensureAudioUnlocked();
+      if (audioCtx && audioCtx.state === 'running' && isAudioRunning) {
+        audioUnlockEvents.forEach(evt => window.removeEventListener(evt, handleWakeAudio));
+      }
+    }
+    audioUnlockEvents.forEach(evt => {
+      window.addEventListener(evt, handleWakeAudio, { passive: true });
+    });
+
+    function fadeOutAudio(duration = 0.08) {
+      if (masterGain && audioCtx) {
+        const now = audioCtx.currentTime;
+        masterGain.gain.setTargetAtTime(0, now, duration);
+      }
+    }
+
+    function fadeToIdleAudio() {
+      if (!isAudioRunning || !audioCtx) return;
+      const now = audioCtx.currentTime;
+      updateAudioRPM(0);
+      if (masterGain && !isAudioMuted) {
+        masterGain.gain.setTargetAtTime(0.10, now, 0.25);
+      }
+    }
+
+    function updateAudioRPM(factor) {
+      if (!isAudioRunning || !audioCtx) {
+        ensureAudioUnlocked();
+      }
+      if (!isAudioRunning || !audioCtx) return;
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => { });
+      }
+
+      const clamped = Math.max(0, Math.min(1, factor));
+      const now = audioCtx.currentTime;
+
+      const baseFreq = 70 + clamped * 190;
+      osc1.frequency.setTargetAtTime(baseFreq, now, 0.04);
+      osc2.frequency.setTargetAtTime(baseFreq * 2, now, 0.04);
+      if (osc3) osc3.frequency.setTargetAtTime(baseFreq * 3, now, 0.04);
+      if (subOsc) subOsc.frequency.setTargetAtTime(Math.max(45, baseFreq * 0.65), now, 0.04);
+
+      if (turboOsc && turboGain) {
+        const turboFreq = 1400 + clamped * 2400;
+        turboOsc.frequency.setTargetAtTime(turboFreq, now, 0.05);
+        const turboVol = 0.01 + clamped * 0.06;
+        turboGain.gain.setTargetAtTime(turboVol, now, 0.05);
+      }
+
+      const cutoff = 480 + clamped * 2320;
+      filter.frequency.setTargetAtTime(cutoff, now, 0.04);
+
+      const vol = 0.22 + clamped * 0.23;
+      masterGain.gain.setTargetAtTime(vol, now, 0.04);
+    }
+
+    let isAudioMuted = false;
+    function toggleEngineSound() {
+      ensureAudioUnlocked();
+      isAudioMuted = !isAudioMuted;
+      if (masterGain && audioCtx) {
+        const now = audioCtx.currentTime;
+        masterGain.gain.setTargetAtTime(isAudioMuted ? 0 : 0.25, now, 0.05);
+      }
+      const icon = document.getElementById('hudSoundIcon');
+      const status = document.getElementById('hudSoundStatus');
+      if (isAudioMuted) {
+        if (icon) icon.setAttribute('data-lucide', 'volume-x');
+        if (status) {
+          status.textContent = 'MUTED';
+          status.className = 'text-[10px] font-mono font-bold text-red-400';
+        }
+      } else {
+        if (icon) icon.setAttribute('data-lucide', 'volume-2');
+        if (status) {
+          status.textContent = 'ACTIVE';
+          status.className = 'text-[10px] font-mono font-bold text-[#def54f]';
+        }
+      }
+      lucide.createIcons();
+    }
+
+    // Headlights Toggle
+    const toggleBeamsBtn = document.getElementById('toggleBeams');
+    const beamLabel = document.getElementById('beamLabel');
+    const headlightBeam = document.getElementById('headlightBeam');
+    let headlightsOn = true;
+
+    if (toggleBeamsBtn) {
+      toggleBeamsBtn.addEventListener('click', () => {
+        headlightsOn = !headlightsOn;
+        if (headlightsOn) {
+          if (headlightBeam) headlightBeam.style.opacity = '1';
+          toggleBeamsBtn.classList.remove('bg-white/5', 'text-slate-400');
+          toggleBeamsBtn.classList.add('bg-[#6ac9ff]/15', 'border-[#6ac9ff]/50', 'text-[#6ac9ff]');
+          if (beamLabel) beamLabel.textContent = 'Beams ON';
+        } else {
+          if (headlightBeam) headlightBeam.style.opacity = '0';
+          toggleBeamsBtn.classList.add('bg-white/5', 'text-slate-400');
+          toggleBeamsBtn.classList.remove('bg-[#6ac9ff]/15', 'border-[#6ac9ff]/50', 'text-[#6ac9ff]');
+          if (beamLabel) beamLabel.textContent = 'Beams OFF';
+        }
+      });
+    }
+
+    // Auto-Cruise
+    const autoCruiseBtn = document.getElementById('autoCruiseBtn');
+    const cruiseLabel = document.getElementById('cruiseLabel');
+    let isCruising = false;
+    let cruiseAnimId = null;
+
+    if (autoCruiseBtn) {
+      autoCruiseBtn.addEventListener('click', () => {
+        ensureAudioUnlocked();
+        if (isCruising) {
+          cancelAnimationFrame(cruiseAnimId);
+          isCruising = false;
+          autoCruiseBtn.classList.remove('bg-red-500/20', 'border-red-500/50', 'text-red-400', 'animate-pulse');
+          autoCruiseBtn.classList.add('bg-[#def54f]', 'text-black', 'border-[#def54f]');
+          if (cruiseLabel) cruiseLabel.textContent = 'Auto-Cruise';
+        } else {
+          isCruising = true;
+          autoCruiseBtn.classList.add('bg-red-500/20', 'border-red-500/50', 'text-red-400', 'animate-pulse');
+          autoCruiseBtn.classList.remove('bg-[#def54f]', 'text-black', 'border-[#def54f]');
+          if (cruiseLabel) cruiseLabel.textContent = 'Cancel Cruise';
+
+          const track = document.getElementById('trackSection');
+          const targetScroll = track.offsetTop + 2500;
+          const startScroll = window.scrollY;
+          const duration = 6500;
+          const startTime = performance.now();
+
+          function stepCruise(now) {
+            const elapsed = now - startTime;
+            const t = Math.min(1, elapsed / duration);
+            const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+            window.scrollTo(0, startScroll + (targetScroll - startScroll) * ease);
+
+            if (t < 1 && isCruising) {
+              cruiseAnimId = requestAnimationFrame(stepCruise);
+            } else {
+              isCruising = false;
+              updateAudioRPM(1.0);
+              autoCruiseBtn.classList.remove('bg-red-500/20', 'border-red-500/50', 'text-red-400', 'animate-pulse');
+              autoCruiseBtn.classList.add('bg-[#def54f]', 'text-black', 'border-[#def54f]');
+              if (cruiseLabel) cruiseLabel.textContent = 'Auto-Cruise';
+            }
+          }
+          cruiseAnimId = requestAnimationFrame(stepCruise);
+        }
+      });
+    }
+
+    // 1. INITIAL LOAD ANIMATIONS
+    window.addEventListener('load', () => {
+      const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+
+      tl.fromTo('.hero-badge',
+        { opacity: 0, y: -20, scale: 0.9 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.8, delay: 0.2 }
+      );
+
+      tl.fromTo('.hero-title .letter',
+        { opacity: 0, y: 40, rotateX: -30 },
+        { opacity: 1, y: 0, rotateX: 0, duration: 0.8, stagger: 0.05 },
+        '-=0.5'
+      );
+
+      tl.fromTo('.hero-subtitle',
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.7 },
+        '-=0.4'
+      );
+
+      tl.fromTo('.stat-card',
+        { opacity: 0, y: 30, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.8, stagger: 0.12 },
+        '-=0.4'
+      );
+
+      tl.fromTo('.scroll-cue',
+        { opacity: 0, y: 15 },
+        { opacity: 1, y: 0, duration: 0.6 },
+        '-=0.2'
+      );
+
+      // Counter count up
+      document.querySelectorAll('.counter').forEach(el => {
+        const target = +el.getAttribute('data-target');
+        const obj = { val: 0 };
+        gsap.to(obj, {
+          val: target,
+          duration: 2.2,
+          ease: 'power2.out',
+          delay: 0.5,
+          onUpdate: () => {
+            el.textContent = Math.round(obj.val);
+          }
+        });
+      });
+    });
+
+    // 2. SCROLL-BASED ANIMATION (Car movement & dynamic sound on scroll)
+    const car = document.getElementById('carVehicle');
+    const trail = document.getElementById('roadTrail');
+    const road = document.getElementById('roadRunway');
+    const letters = document.querySelectorAll('.track-letter');
+    const hudSpeed = document.getElementById('hudSpeed');
+    const hudGear = document.getElementById('hudGear');
+    const hudRpm = document.getElementById('hudRpm');
+    const hudRpmBar = document.getElementById('hudRpmBar');
+    const hudProgress = document.getElementById('hudProgress');
+
+    let celebrationTriggered = false;
+
+    function updateLetters() {
+      const roadRect = road.getBoundingClientRect();
+      return Array.from(letters).map(el => {
+        const r = el.getBoundingClientRect();
+        return {
+          el,
+          x: r.left - roadRect.left + r.width / 2
+        };
+      });
+    }
+
+    let letterMap = updateLetters();
+    const refreshTrack = () => {
+      letterMap = updateLetters();
+      ScrollTrigger.refresh();
+    };
+    window.addEventListener('resize', refreshTrack);
+    window.addEventListener('load', refreshTrack);
+    if (document.fonts) {
+      document.fonts.ready.then(refreshTrack);
+    }
+    setTimeout(refreshTrack, 150);
+    setTimeout(refreshTrack, 600);
+
+    // Ensure car preserves vertical centering with GSAP transforms
+    gsap.set(car, { yPercent: -50 });
+
+    function updateCarScene(p) {
+      const roadWidth = road.offsetWidth || window.innerWidth;
+      const carWidth = car.offsetWidth || 180;
+      const totalTravel = Math.max(0, roadWidth - carWidth);
+      const currentX = p * totalTravel;
+      const carCenterX = currentX + carWidth * 0.75;
+
+      // Update trail width to lock to rear wheels
+      if (trail) {
+        trail.style.width = (currentX + carWidth * 0.25) + 'px';
+      }
+
+      // Reveal letters dynamically
+      letterMap.forEach(item => {
+        if (carCenterX >= item.x) {
+          item.el.style.opacity = '1';
+          item.el.style.color = '#ffffff';
+          item.el.style.textShadow = '0 0 25px rgba(222, 245, 79, 0.8), 0 0 10px rgba(69, 219, 125, 0.6)';
+          item.el.style.transform = 'scale(1.05) translateY(-2px)';
+        } else {
+          item.el.style.opacity = '0.15';
+          item.el.style.color = '#64748b';
+          item.el.style.textShadow = 'none';
+          item.el.style.transform = 'scale(1) translateY(0px)';
+        }
+      });
+
+      // HUD Telemetry
+      const speed = Math.round(p * 341);
+      if (hudSpeed) hudSpeed.textContent = speed;
+
+      let gear = 'N';
+      if (speed === 0) gear = 'P';
+      else if (speed < 40) gear = '1';
+      else if (speed < 90) gear = '2';
+      else if (speed < 150) gear = '3';
+      else if (speed < 210) gear = '4';
+      else if (speed < 270) gear = '5';
+      else if (speed < 320) gear = '6';
+      else gear = '7';
+      if (hudGear) hudGear.textContent = gear;
+
+      const rpm = Math.round(900 + (p * 7300));
+      if (hudRpm) hudRpm.textContent = rpm;
+      if (hudRpmBar) hudRpmBar.style.width = Math.min(100, Math.max(5, p * 100)) + '%';
+      if (hudProgress) hudProgress.textContent = Math.round(p * 100) + '%';
+
+      // Car Sound is ALWAYS active and revs with scrolling
+      ensureAudioUnlocked();
+      updateAudioRPM(p);
+
+      // Confetti finish
+      if (p >= 0.96 && !celebrationTriggered) {
+        celebrationTriggered = true;
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#def54f', '#6ac9ff', '#fa7328', '#45db7d', '#ffffff']
+        });
+      } else if (p < 0.9) {
+        celebrationTriggered = false;
+      }
+    }
+
+    // Master Pinned Kinetic Timeline (GSAP Native Pinning - 100% Reliable on Netlify & All Devices)
+    const trackTl = gsap.timeline({
+      scrollTrigger: {
+        trigger: '#trackSection',
+        pin: true,
+        start: 'top top',
+        end: '+=2500',
+        scrub: 1.1,
+        invalidateOnRefresh: true,
+        onUpdate: (self) => {
+          updateCarScene(self.progress);
+        },
+        onLeave: () => {
+          fadeToIdleAudio();
+        },
+        onLeaveBack: () => {
+          fadeToIdleAudio();
+        },
+        onEnter: () => {
+          ensureAudioUnlocked();
+        },
+        onEnterBack: () => {
+          ensureAudioUnlocked();
+        },
+      },
+    });
+
+    // 1. Car smooth glide across the runway
+    trackTl.to(car, {
+      x: () => Math.max(0, (road.offsetWidth || window.innerWidth) - (car.offsetWidth || 180)),
+      ease: 'none',
+      duration: 1,
+    }, 0);
+
+    // 2. Box 1 (58% Pickup) appears at 15% of track
+    trackTl.fromTo('#fBox1',
+      { opacity: 0, scale: 0.75, y: -30, filter: 'blur(8px)' },
+      { opacity: 1, scale: 1, y: 0, filter: 'blur(0px)', duration: 0.12, ease: 'power2.out' },
+      0.15
+    );
+
+    // 3. Box 2 (23% Call Deflection) appears at 35% of track
+    trackTl.fromTo('#fBox2',
+      { opacity: 0, scale: 0.75, y: 30, filter: 'blur(8px)' },
+      { opacity: 1, scale: 1, y: 0, filter: 'blur(0px)', duration: 0.12, ease: 'power2.out' },
+      0.35
+    );
+
+    // 4. Box 3 (27% Fleet Velocity) and Box 4 (40% Orange Efficiency) appear TOGETHER at 55% of track
+    trackTl.fromTo('#fBox3',
+      { opacity: 0, scale: 0.75, y: -30, filter: 'blur(8px)' },
+      { opacity: 1, scale: 1, y: 0, filter: 'blur(0px)', duration: 0.12, ease: 'power2.out' },
+      0.55
+    );
+    trackTl.fromTo('#fBox4',
+      { opacity: 0, scale: 0.75, y: 30, filter: 'blur(8px)' },
+      { opacity: 1, scale: 1, y: 0, filter: 'blur(0px)', duration: 0.12, ease: 'power2.out' },
+      0.55
+    );
+  </script>
+</body>
+
+</html>
